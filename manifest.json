@@ -1,7 +1,6 @@
 {
   "name": "EZPAY 客服中心",
   "short_name": "EZPAY客服",
-  "description": "提供即時的 EZPAY 專屬客服連線服務",
   "start_url": "index.html",
   "display": "standalone",
   "background_color": "#ffffff",

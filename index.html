@@ -7,101 +7,115 @@
     <link rel="manifest" href="manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    
     <style>
-        body, html { margin: 0; padding: 0; height: 100%; width: 100%; overflow: hidden; background: #fff; font-family: sans-serif; }
+        body, html { margin: 0; padding: 0; height: 100%; width: 100%; overflow: hidden; background: #fff; font-family: -apple-system, sans-serif; }
         #cs-iframe { border: none; width: 100%; height: 100%; display: none; }
-        .ui-overlay { display: flex; align-items: center; justify-content: center; height: 100vh; flex-direction: column; text-align: center; padding: 20px; }
-        .spinner { width: 30px; height: 30px; border: 3px solid #f3f3f3; border-top: 3px solid #007aff; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 10px; }
+        
+        /* UI 層次 */
+        .ui-overlay { display: flex; align-items: center; justify-content: center; height: 100vh; flex-direction: column; text-align: center; padding: 20px; box-sizing: border-box; }
+        .spinner { width: 35px; height: 35px; border: 3px solid #f3f3f3; border-top: 3px solid #007aff; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* Android 安裝按鈕 */
+        #install-container { display: none; margin-top: 20px; animation: fadeIn 0.5s; }
+        #install-btn { background: #34c759; color: white; border: none; padding: 14px 28px; border-radius: 50px; font-weight: bold; font-size: 16px; cursor: pointer; box-shadow: 0 4px 15px rgba(52, 199, 89, 0.3); }
         
-        /* 安裝按鈕樣式 */
-        #install-btn { display: none; background: #34c759; color: white; border: none; padding: 12px 24px; border-radius: 50px; font-weight: bold; font-size: 16px; cursor: pointer; margin-top: 15px; box-shadow: 0 4px 15px rgba(52, 199, 89, 0.3); }
-        
+        /* iOS 引導視窗 */
         #ios-modal {
-            display: none; position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-            background: white; padding: 20px; border-radius: 15px; width: 85%;
-            box-shadow: 0 5px 25px rgba(0,0,0,0.2); z-index: 999; text-align: center;
+            display: none; position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+            background: white; padding: 20px; border-radius: 18px; width: 85%; max-width: 350px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2); z-index: 999; text-align: center;
         }
+        .ios-btn { background: #007aff; color: white; border: none; padding: 12px; border-radius: 10px; width: 100%; margin-top: 15px; font-weight: bold; }
+        
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     </style>
 </head>
 <body>
 
-    <div id="loading" class="ui-overlay">
+    <div id="loading-screen" class="ui-overlay">
         <div class="spinner"></div>
-        <div id="status">安全連線中...</div>
-        <button id="install-btn">安裝客服到桌面</button>
+        <div id="status-text" style="color: #666;">安全連線中...</div>
+        
+        <div id="install-container">
+            <p style="font-size: 14px; color: #333;">安裝到桌面，聯絡客服更方便</p>
+            <button id="install-btn">📥 立即安裝</button>
+        </div>
     </div>
 
     <iframe id="cs-iframe" allow="camera;microphone;clipboard-write"></iframe>
 
     <div id="ios-modal">
-        <div style="font-size: 15px; line-height: 1.6;">
+        <div style="font-size: 16px; line-height: 1.6; color: #333;">
             想要快速聯絡客服嗎？<br>
             請點擊下方的 <img src="https://img.icons8.com/ios/50/000000/share.png" style="width:20px; vertical-align:middle;"> 圖示<br>
             然後選擇 <strong>「加入主畫面」</strong>
         </div>
-        <button onclick="document.getElementById('ios-modal').style.display='none'" style="background:#007aff; color:white; border:none; padding:10px; border-radius:8px; width:100%; margin-top:10px;">我知道了</button>
+        <button class="ios-btn" onclick="document.getElementById('ios-modal').style.display='none'">我知道了</button>
     </div>
 
     <script>
         const API_URL = "https://ezcoin-api.nntitestserver.com/api/v1/customerServiceAddress/byRecommendCode?recommendCode=ezpay";
         let deferredPrompt;
 
-        // 註冊 Service Worker (Android PWA 必備)
+        // 1. 註冊 Service Worker (PWA 必備)
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js').then(() => console.log("SW Registered"));
+            navigator.serviceWorker.register('sw.js').then(() => console.log("SW Active"));
         }
 
-        // 監聽 Android 安裝事件
+        // 2. 監聽 Android 安裝事件
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
             deferredPrompt = e;
-            document.getElementById('install-btn').style.display = 'block';
+            document.getElementById('install-container').style.display = 'block';
         });
 
         document.getElementById('install-btn').addEventListener('click', async () => {
             if (deferredPrompt) {
                 deferredPrompt.prompt();
                 const { outcome } = await deferredPrompt.userChoice;
-                if (outcome === 'accepted') {
-                    document.getElementById('install-btn').style.display = 'none';
-                }
+                if (outcome === 'accepted') document.getElementById('install-container').style.display = 'none';
                 deferredPrompt = null;
             }
         });
 
+        // 3. 環境判斷
         const isIos = () => /iphone|ipad|ipod/.test(navigator.userAgent.toLowerCase());
         const isStandalone = () => window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
 
+        // 4. 初始化 API 與 載入
         async function init() {
             try {
-                // const res = await fetch(API_URL);
+                //const res = await fetch(API_URL);
                 //const json = await res.json();
                 const json = {"code":200,"msg":"操作成功","data":{"recommendCode":"ezpay","serviceUrl":"https://www.google.com/finance/?sa=X&ved=2ahUKEwjAst3FpcKSAxUIzzgGHR_aO0oQ6M8CegQIDBAG","channel":"1"},"success":true}
                 
                 if (json.success && json.data.serviceUrl) {
                     const url = json.data.serviceUrl;
 
+                    // 針對 Google 等禁止內嵌的網址改用新分頁開啟
                     if (url.includes("google.com")) {
-                        const statusEl = document.getElementById('status');
-                        statusEl.innerHTML = `<button onclick="window.open('${url}', '_blank')" style="padding:10px 20px; background:#007aff; color:white; border:none; border-radius:8px;">前往客服頁面</button>`;
-                        document.getElementById('loading').querySelector('.spinner').style.display = 'none';
+                        document.getElementById('status-text').innerHTML = 
+                            `<button onclick="window.open('${url}', '_blank')" style="background:#007aff;color:white;padding:12px 24px;border-radius:8px;border:none;font-weight:bold;">點此開啟客服分頁</button>`;
+                        document.querySelector('.spinner').style.display = 'none';
                         return;
                     }
 
                     const iframe = document.getElementById('cs-iframe');
                     iframe.src = url;
                     iframe.onload = () => {
-                        document.getElementById('loading').style.display = 'none';
+                        document.getElementById('loading-screen').style.display = 'none';
                         iframe.style.display = 'block';
                         
+                        // iOS 且非桌面模式才顯示教學
                         if (isIos() && !isStandalone()) {
-                            document.getElementById('ios-modal').style.display = 'block';
+                            setTimeout(() => { document.getElementById('ios-modal').style.display = 'block'; }, 1000);
                         }
                     };
                 }
             } catch (e) {
-                document.getElementById('status').innerText = "連線失敗";
+                document.getElementById('status-text').innerText = "連線失敗，請重整頁面";
             }
         }
 
