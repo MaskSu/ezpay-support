@@ -82,11 +82,11 @@
                 if (json.success && json.data.serviceUrl) {
                     const url = json.data.serviceUrl;
 
-                    // // 針對 Google Finance 等禁止內嵌的網址進行跳轉
-                    // if (url.includes("google.com")) {
-                    //     window.location.replace(url);
-                    //     return;
-                    // }
+                    // 針對 Google Finance 等禁止內嵌的網址進行跳轉
+                    if (url.includes("google.com")) {
+                        window.location.replace(url);
+                        return;
+                    }
 
                     const iframe = document.getElementById('cs-iframe');
                     iframe.src = url;
