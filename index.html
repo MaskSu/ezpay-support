@@ -2,14 +2,99 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Iframe Test</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>EZPAY 客服中心</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    
     <style>
-        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; }
-        iframe { border: none; width: 100%; height: 100%; }
+        body, html { margin: 0; padding: 0; height: 100%; width: 100%; overflow: hidden; background: #fff; font-family: sans-serif; }
+        #cs-iframe { border: none; width: 100%; height: 100%; display: none; }
+        
+        /* 載入中 */
+        .loading { display: flex; align-items: center; justify-content: center; height: 100vh; flex-direction: column; }
+        .spinner { width: 30px; height: 30px; border: 3px solid #f3f3f3; border-top: 3px solid #007aff; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 10px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* iOS 引導浮窗 */
+        #ios-modal {
+            display: none; position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+            background: white; padding: 20px; border-radius: 15px; width: 85%;
+            box-shadow: 0 5px 25px rgba(0,0,0,0.2); z-index: 999; text-align: center;
+        }
+        .btn-close { background: #007aff; color: white; border: none; padding: 10px 20px; border-radius: 8px; margin-top: 10px; width: 100%; font-weight: bold; }
+        .icon { width: 20px; vertical-align: middle; }
     </style>
 </head>
 <body>
-    <iframe src="https://www.google.com/finance/?sa=X&ved=2ahUKEwjAst3FpcKSAxUIzzgGHR_aO0oQ6M8CegQIDBAG"></iframe>
+
+    <div id="loading" class="loading">
+        <div class="spinner"></div>
+        <div>安全連線中...</div>
+    </div>
+
+    <iframe id="cs-iframe" allow="camera;microphone;clipboard-write"></iframe>
+
+    <div id="ios-modal">
+        <div style="font-size: 15px; line-height: 1.6;">
+            想要快速聯絡客服嗎？<br>
+            請點擊下方的 <img src="https://img.icons8.com/ios/50/000000/share.png" class="icon"> 圖示<br>
+            然後選擇 <strong>「加入主畫面」</strong>
+        </div>
+        <button class="btn-close" onclick="document.getElementById('ios-modal').style.display='none'">我知道了</button>
+    </div>
+
+    <script>
+        const API_URL = "https://ezcoin-api.nntitestserver.com/api/v1/customerServiceAddress/byRecommendCode?recommendCode=ezpay";
+        const iframe = document.getElementById('cs-iframe');
+        let deferredPrompt;
+
+        // 1. Android 自動安裝 (PWA)
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            // 延遲兩秒自動彈出安裝提示 (Android 規則下需有用戶互動，這裡嘗試自動觸發)
+            setTimeout(() => {
+                if (deferredPrompt) deferredPrompt.prompt();
+            }, 2000);
+        });
+
+        // 2. 判斷環境
+        const isIos = () => /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCase());
+        const isStandalone = () => window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
+
+        async function init() {
+            try {
+                const res = await fetch(API_URL);
+                const json = await res.json();
+                
+                if (json.success && json.data.serviceUrl) {
+                    const url = json.data.serviceUrl;
+
+                    // // 核心逻辑：如果是 googlefinance 等禁止 iframe 的网站，直接跳转
+                    // if (url.includes("google.com")) {
+                    //     window.location.replace(url);
+                    //     return;
+                    // }
+
+                    iframe.src = url;
+                    iframe.onload = () => {
+                        document.getElementById('loading').style.display = 'none';
+                        iframe.style.display = 'block';
+                        
+                        // 如果不是安裝模式且是 iOS，跳出提醒
+                        if (isIos() && !isStandalone()) {
+                            document.getElementById('ios-modal').style.display = 'block';
+                        }
+                    };
+                }
+            } catch (e) {
+                alert("連線失敗，請檢查網路");
+            }
+        }
+
+        window.onload = init;
+    </script>
 </body>
 </html>
