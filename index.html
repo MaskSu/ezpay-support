@@ -82,9 +82,10 @@
                 if (json.success && json.data.serviceUrl) {
                     const url = json.data.serviceUrl;
 
-                    // 針對 Google Finance 等禁止內嵌的網址進行跳轉
                     if (url.includes("google.com")) {
-                        window.location.replace(url);
+                        const statusEl = document.getElementById('status');
+                        statusEl.innerHTML = `<button onclick="window.open('${url}', '_blank')" style="padding:10px 20px; background:#007aff; color:white; border:none; border-radius:8px;">前往客服頁面</button>`;
+                        document.getElementById('loading').querySelector('.spinner').style.display = 'none';
                         return;
                     }
 
