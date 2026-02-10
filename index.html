@@ -116,14 +116,6 @@
                 if (json.success && json.data.serviceUrl) {
                     const url = json.data.serviceUrl;
 
-                    // Google 网址跳转防护
-                    if (url.includes("google.com")) {
-                        document.getElementById('status-text').innerHTML = 
-                            `<button onclick="window.location.replace('${url}')" style="background:var(--main-color);color:white;padding:15px 30px;border-radius:50px;border:none;font-weight:bold;">进入客服系统</button>`;
-                        document.querySelector('.spinner').style.display = 'none';
-                        return;
-                    }
-
                     const iframe = document.getElementById('cs-iframe');
                     iframe.src = url;
                     iframe.onload = () => {
