@@ -7,11 +7,20 @@ self.addEventListener('activate', (event) => {
     return self.clients.claim();
 });
 
-// 必須監聽 fetch 事件，PWA 安裝提示才會生效
 self.addEventListener('fetch', (event) => {
-    // 排除 API 請求，避免 CORS 錯誤
-    if (event.request.url.includes('nntitestserver.com')) {
-        return;
+    const url = new URL(event.request.url);
+
+    // 1. 完全不攔截 API 網域，避免 CORS 與 Fetch 報錯
+    if (url.hostname.includes('nntitestserver.com')) {
+        return; 
     }
-    event.respondWith(fetch(event.request));
+
+    // 2. 處理其他請求並捕捉錯誤
+    event.respondWith(
+        fetch(event.request).catch((err) => {
+            console.warn('[SW] Fetch 失敗:', event.request.url);
+            // 回傳一個空的響應，防止 Uncaught Promise 報錯
+            return new Response('Network error', { status: 408 });
+        })
+    );
 });
