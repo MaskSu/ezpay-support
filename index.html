@@ -52,12 +52,20 @@
 
     <iframe id="cs-iframe" allow="camera;microphone;clipboard-write"></iframe>
 
-    <div id="android-guide" class="guide-card">
+    <div id="android-native-guide" class="guide-card">
         <div class="guide-title">安装客服到桌面</div>
         <div class="guide-text">将客服系统安装至主画面，<br>下次联络更快速、更方便！</div>
         <div class="btn-group">
             <button id="install-btn" class="btn-secondary">立即安装</button>
-            <button onclick="closeGuide('android-guide')" class="btn-close">关闭</button>
+            <button onclick="closeGuide('android-native-guide')" class="btn-close">关闭</button>
+        </div>
+    </div>
+
+    <div id="android-manual-guide" class="guide-card">
+        <div class="guide-title">新增至主画面</div>
+        <div class="guide-text">点击浏览器的<strong>「三点图示」</strong>，<br>选择<strong>「新增至主画面」</strong>以便日后联络。</div>
+        <div class="btn-group">
+            <button onclick="closeGuide('android-manual-guide')" class="btn-secondary" style="flex:1">我知道了</button>
         </div>
     </div>
 
@@ -72,41 +80,48 @@
     <script>
         const API_URL = 'https://ezcoin-api.nntitestserver.com/api/v1/customerServiceAddress/byRecommendCode?recommendCode=ezpay';
         let deferredPrompt;
+        let pwaEventTriggered = false;
 
         // 注册 Service Worker
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('sw.js').then(() => console.log('SW Active'));
         }
 
-        // 环境检查
         const isIos = () => /iphone|ipad|ipod/.test(navigator.userAgent.toLowerCase());
+        const isAndroid = () => /android/.test(navigator.userAgent.toLowerCase());
         const isStandalone = () => window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
 
-        // 关闭引导卡片
         function closeGuide(id) {
             document.getElementById(id).style.display = 'none';
         }
 
-        // Android 安装监听
+        // 1. Android 原生事件监听
         window.addEventListener('beforeinstallprompt', (e) => {
             if (isStandalone()) return;
             e.preventDefault();
             deferredPrompt = e;
-            // 延迟一点点显示，避免遮挡初始内容
+            pwaEventTriggered = true; // 标记已监听到原生事件
+            
             setTimeout(() => {
-                document.getElementById('android-guide').style.display = 'block';
+                document.getElementById('android-native-guide').style.display = 'block';
             }, 1500);
         });
 
-        // 执行 Android 安装
         document.getElementById('install-btn').onclick = async () => {
             if (deferredPrompt) {
                 deferredPrompt.prompt();
                 const { outcome } = await deferredPrompt.userChoice;
-                if (outcome === 'accepted') closeGuide('android-guide');
+                if (outcome === 'accepted') closeGuide('android-native-guide');
                 deferredPrompt = null;
             }
         };
+
+        // 2. Android 备援机制：如果 3 秒后没监听到事件且非桌面模式
+        setTimeout(() => {
+            if (isAndroid() && !isStandalone() && !pwaEventTriggered) {
+                document.getElementById('android-manual-guide').style.display = 'block';
+            }
+        }, 3000);
 
         async function init() {
             try {
@@ -115,14 +130,13 @@
                 
                 if (json.success && json.data.serviceUrl) {
                     const url = json.data.serviceUrl;
-
                     const iframe = document.getElementById('cs-iframe');
                     iframe.src = url;
                     iframe.onload = () => {
                         document.getElementById('loading-ui').style.display = 'none';
                         iframe.style.display = 'block';
                         
-                        // iOS 且非桌面模式显示引导
+                        // iOS 提示
                         if (isIos() && !isStandalone()) {
                             setTimeout(() => {
                                 document.getElementById('ios-guide').style.display = 'block';
