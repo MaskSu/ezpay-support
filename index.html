@@ -65,8 +65,8 @@
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('sw.js')
-                    .then(reg => console.log('SW 註冊成功'))
-                    .catch(err => console.log('SW 註冊失敗', err));
+                    .then(reg => alert('SW 註冊成功'))
+                    .catch(err => alert('SW 註冊失敗', err));
             });
         }
 
